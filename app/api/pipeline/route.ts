@@ -16,7 +16,7 @@ async function post(path: string, body: object) {
 }
 
 export async function POST(req: NextRequest) {
-  const { topic, useTTS = true } = await req.json();
+  const { topic, script: preApprovedScript, useTTS = true } = await req.json();
   const jobId = `job-${Date.now()}`;
   const enc = new TextEncoder();
 
@@ -26,24 +26,40 @@ export async function POST(req: NextRequest) {
         ctrl.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
 
       try {
-        // Step 1: 대본 생성
-        emit({ step: 'script', status: 'loading' });
-        const { script } = await post('/api/script', { topic });
-        emit({ step: 'script', status: 'done' });
+        // Step 1: 대본 — 이미 승인된 대본이 있으면 사용, 없으면 생성
+        let script: string;
+        if (preApprovedScript) {
+          script = preApprovedScript;
+          emit({ step: 'script', status: 'done' });
+        } else {
+          emit({ step: 'script', status: 'loading' });
+          const res = await post('/api/script', { topic });
+          script = res.script;
+          emit({ step: 'script', status: 'done' });
+        }
+
 
         // Step 2: 씬 분석
         emit({ step: 'scenes', status: 'loading' });
         const { scenes } = await post('/api/scenes', { script });
         emit({ step: 'scenes', status: 'done', count: scenes.length });
 
-        // Step 3: ai_free 씬 코드 생성
-        const aiFreeCount = scenes.filter((s: { type: string }) => s.type === 'ai_free').length;
-        if (aiFreeCount > 0) {
+        // Step 3: ai_free 씬 코드 생성 (배치 처리 → Gemini API 1회 호출)
+        const aiFreeScenes = scenes
+          .map((scene: { type: string; prompt?: string }, idx: number) => ({ scene, idx }))
+          .filter(({ scene }: { scene: { type: string } }) => scene.type === 'ai_free');
+
+        if (aiFreeScenes.length > 0) {
           emit({ step: 'ai-code', status: 'loading' });
-          for (const scene of scenes) {
-            if (scene.type === 'ai_free') {
-              const { code } = await post('/api/ai-code', { prompt: scene.prompt });
-              scene.generatedCode = code;
+          const { codes } = await post('/api/ai-code', {
+            scenes: aiFreeScenes.map(({ scene, idx }: { scene: { prompt?: string }, idx: number }) => ({
+              idx,
+              prompt: scene.prompt ?? '',
+            })),
+          });
+          for (const { scene, idx } of aiFreeScenes) {
+            if (codes[idx]) {
+              (scene as { generatedCode?: string }).generatedCode = codes[idx];
             }
           }
           emit({ step: 'ai-code', status: 'done' });

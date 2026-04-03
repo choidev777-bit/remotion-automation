@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { InputForm } from './components/InputForm';
 import { ProgressTracker } from './components/ProgressTracker';
 import { ResultPanel } from './components/ResultPanel';
+import { ScriptReview } from './components/ScriptReview';
 
 type PipelineStep = {
   step: string;
@@ -11,14 +12,45 @@ type PipelineStep = {
   [key: string]: unknown;
 };
 
+type Phase = 'input' | 'script-review' | 'building' | 'done';
+
 export default function Home() {
-  const [isRunning, setIsRunning] = useState(false);
+  const [phase, setPhase] = useState<Phase>('input');
+  const [topic, setTopic] = useState('');
+  const [pendingScript, setPendingScript] = useState<string | null>(null);
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [result, setResult] = useState<{ outputPath: string; jobId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = useCallback(async (topic: string, useTTS: boolean) => {
-    setIsRunning(true);
+  // Phase 1: 대본만 생성 → 리뷰 대기
+  const handleGenerateScript = useCallback(async (inputTopic: string, _useTTS: boolean) => {
+    setTopic(inputTopic);
+    setIsGeneratingScript(true);
+    setError(null);
+    setPendingScript(null);
+
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: inputTopic }),
+      });
+      if (!res.ok) throw new Error(`대본 생성 실패 (${res.status})`);
+      const { script } = await res.json();
+      setPendingScript(script);
+      setPhase('script-review');
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  }, []);
+
+  // Phase 2: 승인된 대본으로 나머지 파이프라인 실행
+  const handleApproveScript = useCallback(async (finalScript: string) => {
+    setPendingScript(null);
+    setPhase('building');
     setSteps([]);
     setResult(null);
     setError(null);
@@ -27,7 +59,7 @@ export default function Home() {
       const res = await fetch('/api/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, useTTS }),
+        body: JSON.stringify({ topic, script: finalScript, useTTS: true }),
       });
 
       if (!res.body) throw new Error('No response stream');
@@ -52,6 +84,7 @@ export default function Home() {
                 outputPath: data.outputPath as string,
                 jobId: data.jobId as string,
               });
+              setPhase('done');
             }
 
             setSteps((prev) => {
@@ -70,9 +103,15 @@ export default function Home() {
       }
     } catch (err) {
       setError(String(err));
-    } finally {
-      setIsRunning(false);
+      setPhase('input');
     }
+  }, [topic]);
+
+  // 대본 재생성 — 입력 단계로 돌아가기
+  const handleRejectScript = useCallback(() => {
+    setPendingScript(null);
+    setPhase('input');
+    setError(null);
   }, []);
 
   return (
@@ -84,8 +123,30 @@ export default function Home() {
         <p className="subtitle">주제만 입력하면 AI가 영상을 만들어 드립니다</p>
       </header>
 
-      {/* 입력 폼 */}
-      <InputForm onGenerate={handleGenerate} isRunning={isRunning} />
+      {/* Phase: 입력 */}
+      {(phase === 'input' || phase === 'building' || phase === 'done') && (
+        <InputForm
+          onGenerate={handleGenerateScript}
+          isRunning={isGeneratingScript || phase === 'building'}
+        />
+      )}
+
+      {/* 대본 생성 중 */}
+      {isGeneratingScript && (
+        <div className="loading-box">
+          <span className="spinner" />
+          <span>대본 생성 중...</span>
+        </div>
+      )}
+
+      {/* Phase: 대본 리뷰 */}
+      {phase === 'script-review' && pendingScript && (
+        <ScriptReview
+          script={pendingScript}
+          onApprove={handleApproveScript}
+          onReject={handleRejectScript}
+        />
+      )}
 
       {/* 에러 */}
       {error && <div className="error-box">⚠️ {error}</div>}
