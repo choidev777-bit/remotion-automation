@@ -33,6 +33,8 @@ function buildGeneratedVideoCode(scenes: Scene[], audioSrc: string, jobId: strin
         return `      <Series.Sequence durationInFrames={${d}}><GifInsert {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
       if (s.type === 'image_insert')
         return `      <Series.Sequence durationInFrames={${d}}><ImageInsert {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
+      if (s.type === 'user_media')
+        return `      <Series.Sequence durationInFrames={${d}}><UserMedia {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
       if (s.type === 'ai_free')
         return `      <Series.Sequence durationInFrames={${d}}><AI${i} /></Series.Sequence>`;
       return '';
@@ -48,6 +50,7 @@ import { Flowchart } from './templates/Flowchart';
 import { HighlightText } from './templates/HighlightText';
 import { GifInsert } from './templates/GifInsert';
 import { ImageInsert } from './templates/ImageInsert';
+import { UserMedia } from './templates/UserMedia';
 ${aiImports}
 
 export const GeneratedVideo: React.FC = () => (

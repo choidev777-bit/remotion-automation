@@ -49,6 +49,14 @@ export type AiFreeScene = {
   generatedCode: string;
 };
 
+export type UserMediaScene = {
+  type: 'user_media';
+  durationInFrames: number;
+  mediaSrc: string;        // "user-media/job-xxx-1234.mp4" (remotion/public/ 기준)
+  mediaType: 'image' | 'video';
+  caption?: string;
+};
+
 export type Scene =
   | TitleScene
   | CardListScene
@@ -56,7 +64,8 @@ export type Scene =
   | HighlightTextScene
   | GifInsertScene
   | ImageInsertScene
-  | AiFreeScene;
+  | AiFreeScene
+  | UserMediaScene;
 
 export type VideoConfig = {
   scenes: Scene[];

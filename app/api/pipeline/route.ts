@@ -16,8 +16,16 @@ async function post(path: string, body: object) {
 }
 
 export async function POST(req: NextRequest) {
-  const { topic, script: preApprovedScript, useTTS = true } = await req.json();
-  const jobId = `job-${Date.now()}`;
+  const {
+    topic,
+    script: preApprovedScript,
+    useTTS = true,
+    stopAfterScenes = false,  // true: 씨 생성 후 중단 (미디어 삽입 대기)
+    skipToRender = false,     // true: scenes 배열을 외부에서 받아 바로 렌더
+    scenes: externalScenes,   // skipToRender 시 사용할 씩 데이터
+    jobId: externalJobId,     // skipToRender 시 기존 jobId
+  } = await req.json();
+  const jobId = externalJobId ?? `job-${Date.now()}`;
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -39,52 +47,69 @@ export async function POST(req: NextRequest) {
         }
 
 
-        // Step 2: 씬 분석
-        emit({ step: 'scenes', status: 'loading' });
-        const { scenes } = await post('/api/scenes', { script });
-        emit({ step: 'scenes', status: 'done', count: scenes.length });
+        // Step 2-4: 씬 관련 로직 (외부 씬 데이터가 없을 때만)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let scenes: any[];
+        if (skipToRender && externalScenes) {
+          // 외부에서 무언가 받은 씩 (미디어 삽입 후)
+          scenes = externalScenes;
+          emit({ step: 'scenes', status: 'done', count: scenes.length });
+        } else {
+          // Step 2: 씩 분석
+          emit({ step: 'scenes', status: 'loading' });
+          const { scenes: generatedScenes } = await post('/api/scenes', { script });
+          scenes = generatedScenes;
+          emit({ step: 'scenes', status: 'done', count: scenes.length, scenes, jobId });
 
-        // Step 3: ai_free 씬 코드 생성 (배치 처리 → Gemini API 1회 호출)
-        const aiFreeScenes = scenes
-          .map((scene: { type: string; prompt?: string }, idx: number) => ({ scene, idx }))
-          .filter(({ scene }: { scene: { type: string } }) => scene.type === 'ai_free');
-
-        if (aiFreeScenes.length > 0) {
-          emit({ step: 'ai-code', status: 'loading' });
-          const { codes } = await post('/api/ai-code', {
-            scenes: aiFreeScenes.map(({ scene, idx }: { scene: { prompt?: string }, idx: number }) => ({
-              idx,
-              prompt: scene.prompt ?? '',
-            })),
-          });
-          for (const { scene, idx } of aiFreeScenes) {
-            if (codes[idx]) {
-              (scene as { generatedCode?: string }).generatedCode = codes[idx];
-            }
+          // stopAfterScenes: 쐩 생성 후 정지 (미디어 삽입 단계 대기)
+          if (stopAfterScenes) {
+            ctrl.close();
+            return;
           }
-          emit({ step: 'ai-code', status: 'done' });
-        }
 
-        // Step 4: GIF URL 검색
-        const gifCount = scenes.filter((s: { type: string }) => s.type === 'gif_insert').length;
-        if (gifCount > 0) {
-          emit({ step: 'gif', status: 'loading' });
-          for (const scene of scenes) {
-            if (scene.type === 'gif_insert') {
-              try {
-                const r = await fetch(
-                  `${BASE}/api/gif?keyword=${encodeURIComponent(scene.keyword)}`
-                );
-                if (r.ok) {
-                  const { gifUrl } = await r.json();
-                  scene.gifUrl = gifUrl;
-                }
-              } catch {
-                // GIF 검색 실패 시 해당 씬 스킵 (영상 생성은 계속)
+          // Step 3: ai_free 쐩 코드 생성
+          const aiFreeScenes = scenes
+            .map((scene: { type: string; prompt?: string }, idx: number) => ({ scene, idx }))
+            .filter(({ scene }: { scene: { type: string } }) => scene.type === 'ai_free');
+
+          if (aiFreeScenes.length > 0) {
+            emit({ step: 'ai-code', status: 'loading' });
+            const { codes } = await post('/api/ai-code', {
+              scenes: aiFreeScenes.map(({ scene, idx }: { scene: { prompt?: string }, idx: number }) => ({
+                idx,
+                prompt: scene.prompt ?? '',
+              })),
+            });
+            for (const { scene, idx } of aiFreeScenes) {
+              if (codes[idx]) {
+                (scene as { generatedCode?: string }).generatedCode = codes[idx];
               }
             }
+            emit({ step: 'ai-code', status: 'done' });
           }
-          emit({ step: 'gif', status: 'done' });
+
+          // Step 4: GIF URL 검색
+          const gifCount = scenes.filter((s: { type: string }) => s.type === 'gif_insert').length;
+          if (gifCount > 0) {
+            emit({ step: 'gif', status: 'loading' });
+            for (const scene of scenes) {
+              if ((scene as { type: string; keyword?: string }).type === 'gif_insert') {
+                try {
+                  const s = scene as { type: string; keyword: string; gifUrl?: string };
+                  const r = await fetch(
+                    `${BASE}/api/gif?keyword=${encodeURIComponent(s.keyword)}`
+                  );
+                  if (r.ok) {
+                    const { gifUrl } = await r.json();
+                    s.gifUrl = gifUrl;
+                  }
+                } catch {
+                  // GIF 검색 실패 시 스킵
+                }
+              }
+            }
+            emit({ step: 'gif', status: 'done' });
+          }
         }
 
         // Step 5: TTS 음성 생성 (선택)
