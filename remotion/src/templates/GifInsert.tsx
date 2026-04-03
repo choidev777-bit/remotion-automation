@@ -22,15 +22,33 @@ export const GifInsert: React.FC<GifInsertScene> = ({ gifUrl, caption }) => {
         opacity,
       }}
     >
-      <Img
-        src={gifUrl}
-        style={{
-          maxWidth: '80%',
-          maxHeight: caption ? '75%' : '85%',
-          borderRadius: theme.radius.lg,
-          objectFit: 'contain',
-        }}
-      />
+      {gifUrl ? (
+        <Img
+          src={gifUrl}
+          style={{
+            maxWidth: '80%',
+            maxHeight: caption ? '75%' : '85%',
+            borderRadius: theme.radius.lg,
+            objectFit: 'contain',
+          }}
+        />
+      ) : (
+        /* GIF URL이 없을 때 플레이스홀더 */
+        <div
+          style={{
+            width: '60%',
+            height: '60%',
+            borderRadius: theme.radius.lg,
+            backgroundColor: theme.colors.card,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 80,
+          }}
+        >
+          🎬
+        </div>
+      )}
       {caption && (
         <p
           style={{
