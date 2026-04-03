@@ -8,7 +8,7 @@ export const TitleSlide: React.FC<TitleScene> = ({ title, subtitle }) => {
   const opacity = interpolate(frame, [0, theme.animation.duration.normal], [0, 1], {
     extrapolateRight: 'clamp',
   });
-  const translateY = interpolate(frame, [0, theme.animation.duration.normal], [30, 0], {
+  const translateY = interpolate(frame, [0, theme.animation.duration.normal], [40, 0], {
     extrapolateRight: 'clamp',
   });
 
@@ -20,20 +20,22 @@ export const TitleSlide: React.FC<TitleScene> = ({ title, subtitle }) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: theme.spacing.xxl,
         fontFamily: theme.font.family,
       }}
     >
+      {/* 상단 강조 바 */}
       <div
         style={{
-          width: 80,
-          height: 6,
+          width: 64,
+          height: 5,
           borderRadius: theme.radius.full,
           backgroundColor: theme.colors.primary,
           marginBottom: theme.spacing.lg,
           opacity,
+          boxShadow: `0 0 20px ${theme.colors.primary}`,
         }}
       />
+      {/* 메인 제목 */}
       <h1
         style={{
           fontSize: theme.font.size.hero,
@@ -41,14 +43,17 @@ export const TitleSlide: React.FC<TitleScene> = ({ title, subtitle }) => {
           color: theme.colors.text,
           textAlign: 'center',
           margin: 0,
-          marginBottom: subtitle ? theme.spacing.md : 0,
+          marginBottom: subtitle ? theme.spacing.sm : 0,
           opacity,
           transform: `translateY(${translateY}px)`,
-          lineHeight: 1.2,
+          lineHeight: 1.15,
+          letterSpacing: '-2px',
+          padding: `0 ${theme.spacing.xxl}px`,
         }}
       >
         {title}
       </h1>
+      {/* 부제목 */}
       {subtitle && (
         <p
           style={{
@@ -59,6 +64,7 @@ export const TitleSlide: React.FC<TitleScene> = ({ title, subtitle }) => {
             margin: 0,
             opacity,
             transform: `translateY(${translateY}px)`,
+            letterSpacing: '-0.5px',
           }}
         >
           {subtitle}

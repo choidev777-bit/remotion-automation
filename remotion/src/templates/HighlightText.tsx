@@ -14,6 +14,12 @@ export const HighlightText: React.FC<HighlightTextScene> = ({ text, emphasis }) 
     [0, 1],
     { extrapolateRight: 'clamp' }
   );
+  const emphasisScale = interpolate(
+    frame,
+    [theme.animation.duration.slow, theme.animation.duration.slow + 15],
+    [0.8, 1],
+    { extrapolateRight: 'clamp' }
+  );
 
   return (
     <AbsoluteFill
@@ -23,7 +29,7 @@ export const HighlightText: React.FC<HighlightTextScene> = ({ text, emphasis }) 
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: theme.spacing.xxl,
+        padding: `0 ${theme.spacing.xxl}px`,
         fontFamily: theme.font.family,
       }}
     >
@@ -33,9 +39,10 @@ export const HighlightText: React.FC<HighlightTextScene> = ({ text, emphasis }) 
           fontWeight: theme.font.weight.bold,
           color: theme.colors.text,
           textAlign: 'center',
-          lineHeight: 1.4,
+          lineHeight: 1.3,
           margin: 0,
           opacity: progress,
+          letterSpacing: '-2px',
         }}
       >
         {text}
@@ -44,13 +51,15 @@ export const HighlightText: React.FC<HighlightTextScene> = ({ text, emphasis }) 
         <div
           style={{
             marginTop: theme.spacing.lg,
-            padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
+            padding: `${theme.spacing.sm}px ${theme.spacing.lg}px`,
             backgroundColor: theme.colors.accent,
             borderRadius: theme.radius.md,
-            fontSize: theme.font.size.h3,
+            fontSize: theme.font.size.h2,
             fontWeight: theme.font.weight.black,
             color: '#000',
             opacity: emphasisOpacity,
+            transform: `scale(${emphasisScale})`,
+            letterSpacing: '-1px',
           }}
         >
           {emphasis}
