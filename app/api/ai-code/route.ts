@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { proModel } from '@/lib/gemini';
+import { flashModel } from '@/lib/gemini';
 import { AI_FREE_PROMPT } from '@/lib/prompts';
 
 export async function POST(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
     }
 
-    const result = await proModel.generateContent(AI_FREE_PROMPT + prompt);
+    const result = await flashModel.generateContent(AI_FREE_PROMPT + prompt);
     let code = result.response.text();
 
     // 마크다운 코드블록 제거
