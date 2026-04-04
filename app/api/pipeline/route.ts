@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
           emit({ step: 'script', status: 'done' });
         } else {
           emit({ step: 'script', status: 'loading' });
-          const res = await post('/api/script', { topic });
+          const res = await post('/api/script', { topic }, 120_000);
           script = res.script;
           emit({ step: 'script', status: 'done' });
         }
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
           emit({ step: 'scenes', status: 'done', count: scenes.length });
         } else {
           emit({ step: 'scenes', status: 'loading' });
-          const { scenes: generatedScenes } = await post('/api/scenes', { script });
+          const { scenes: generatedScenes } = await post('/api/scenes', { script }, 120_000);
           scenes = generatedScenes;
           emit({ step: 'scenes', status: 'done', count: scenes.length, scenes, jobId });
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
               idx,
               prompt: scene.prompt ?? '',
             })),
-          });
+          }, 180_000);  // ai_free 여러 개 시 시간 소요
           for (const { scene, idx } of aiFreeScenes) {
             if (codes[idx]) {
               (scene as { generatedCode?: string }).generatedCode = codes[idx];
