@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { flashModel } from '@/lib/gemini';
+import { glmChat } from '@/lib/glm';
 import { SCENES_PROMPT } from '@/lib/prompts';
 import type { Scene } from '../../../remotion/src/types';
 
@@ -10,10 +10,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'script is required' }, { status: 400 });
     }
 
-    const result = await flashModel.generateContent(SCENES_PROMPT + script);
-    const raw = result.response.text();
+    const raw = await glmChat(SCENES_PROMPT + script);
 
-    // Gemini가 마크다운 코드블록으로 감쌀 경우 제거
+    // 마크다운 코드블록으로 감쌀 경우 제거
     const jsonStr = raw
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')

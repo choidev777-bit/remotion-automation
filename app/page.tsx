@@ -28,6 +28,7 @@ export default function Home() {
   // 미디어 삽입용
   const [pendingScenes, setPendingScenes] = useState<Scene[]>([]);
   const [pendingJobId, setPendingJobId] = useState<string>('');
+  const [approvedScript, setApprovedScript] = useState<string>('');  // 승인된 대본 보존
   // 재편집용 — 렌더 완료 후 씬 데이터 보존
   const [finalScenes, setFinalScenes] = useState<Scene[]>([]);
   const [finalJobId, setFinalJobId] = useState<string>('');
@@ -59,6 +60,7 @@ export default function Home() {
   // Phase 2: 승인된 대본으로 씬 생성 (미디어 삽입 전 단계)
   const handleApproveScript = useCallback(async (finalScript: string) => {
     setPendingScript(null);
+    setApprovedScript(finalScript);  // 대본 저장 (TTS용)
     setPhase('building');
     setSteps([]);
     setResult(null);
@@ -130,6 +132,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic,
+          script: approvedScript,   // 승인된 대본 전달 (TTS용)
           jobId: pendingJobId,
           scenes: confirmedScenes,
           useTTS: true,
@@ -183,7 +186,7 @@ export default function Home() {
     } catch (err) {
       setError(String(err));
     }
-  }, [topic, pendingJobId]);
+  }, [topic, pendingJobId, approvedScript]);
 
   // Phase 4: 재편집 → re-render
   const handleRerender = useCallback(async (modifiedScenes: Scene[], originalJobId: string) => {

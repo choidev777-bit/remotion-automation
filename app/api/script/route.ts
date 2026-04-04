@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { flashModel } from '@/lib/gemini';
+import { glmChat } from '@/lib/glm';
 import { SCRIPT_PROMPT } from '@/lib/prompts';
 
 export async function POST(req: NextRequest) {
@@ -9,8 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'topic is required' }, { status: 400 });
     }
 
-    const result = await flashModel.generateContent(SCRIPT_PROMPT + topic);
-    const script = result.response.text();
+    const script = await glmChat(SCRIPT_PROMPT + topic);
 
     return NextResponse.json({ script });
   } catch (err) {

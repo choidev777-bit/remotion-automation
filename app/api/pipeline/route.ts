@@ -2,17 +2,27 @@ import { NextRequest } from 'next/server';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
 
-async function post(path: string, body: object) {
-  const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`${path} failed (${res.status}): ${err}`);
+// Next.js route segment config: 최대 실행 시간 확장 (TTS + 렌더 포함)
+export const maxDuration = 900; // 15분
+
+async function post(path: string, body: object, timeoutMs = 30_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`${path} failed (${res.status}): ${err}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 export async function POST(req: NextRequest) {
@@ -47,69 +57,64 @@ export async function POST(req: NextRequest) {
         }
 
 
-        // Step 2-4: 씬 관련 로직 (외부 씬 데이터가 없을 때만)
+        // Step 2: 씬 데이터 준비
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let scenes: any[];
         if (skipToRender && externalScenes) {
-          // 외부에서 무언가 받은 씩 (미디어 삽입 후)
           scenes = externalScenes;
           emit({ step: 'scenes', status: 'done', count: scenes.length });
         } else {
-          // Step 2: 씩 분석
           emit({ step: 'scenes', status: 'loading' });
           const { scenes: generatedScenes } = await post('/api/scenes', { script });
           scenes = generatedScenes;
           emit({ step: 'scenes', status: 'done', count: scenes.length, scenes, jobId });
 
-          // stopAfterScenes: 쐩 생성 후 정지 (미디어 삽입 단계 대기)
           if (stopAfterScenes) {
             ctrl.close();
             return;
           }
+        }
 
-          // Step 3: ai_free 쐩 코드 생성
-          const aiFreeScenes = scenes
-            .map((scene: { type: string; prompt?: string }, idx: number) => ({ scene, idx }))
-            .filter(({ scene }: { scene: { type: string } }) => scene.type === 'ai_free');
+        // Step 3: ai_free 씬 코드 생성 (항상 실행)
+        const aiFreeScenes = scenes
+          .map((scene: { type: string; prompt?: string }, idx: number) => ({ scene, idx }))
+          .filter(({ scene }: { scene: { type: string } }) => scene.type === 'ai_free');
 
-          if (aiFreeScenes.length > 0) {
-            emit({ step: 'ai-code', status: 'loading' });
-            const { codes } = await post('/api/ai-code', {
-              scenes: aiFreeScenes.map(({ scene, idx }: { scene: { prompt?: string }, idx: number }) => ({
-                idx,
-                prompt: scene.prompt ?? '',
-              })),
-            });
-            for (const { scene, idx } of aiFreeScenes) {
-              if (codes[idx]) {
-                (scene as { generatedCode?: string }).generatedCode = codes[idx];
-              }
+        if (aiFreeScenes.length > 0) {
+          emit({ step: 'ai-code', status: 'loading' });
+          const { codes } = await post('/api/ai-code', {
+            scenes: aiFreeScenes.map(({ scene, idx }: { scene: { prompt?: string }, idx: number }) => ({
+              idx,
+              prompt: scene.prompt ?? '',
+            })),
+          });
+          for (const { scene, idx } of aiFreeScenes) {
+            if (codes[idx]) {
+              (scene as { generatedCode?: string }).generatedCode = codes[idx];
             }
-            emit({ step: 'ai-code', status: 'done' });
           }
+          emit({ step: 'ai-code', status: 'done' });
+        }
 
-          // Step 4: GIF URL 검색
-          const gifCount = scenes.filter((s: { type: string }) => s.type === 'gif_insert').length;
-          if (gifCount > 0) {
-            emit({ step: 'gif', status: 'loading' });
-            for (const scene of scenes) {
-              if ((scene as { type: string; keyword?: string }).type === 'gif_insert') {
-                try {
-                  const s = scene as { type: string; keyword: string; gifUrl?: string };
-                  const r = await fetch(
-                    `${BASE}/api/gif?keyword=${encodeURIComponent(s.keyword)}`
-                  );
-                  if (r.ok) {
-                    const { gifUrl } = await r.json();
-                    s.gifUrl = gifUrl;
-                  }
-                } catch {
-                  // GIF 검색 실패 시 스킵
+        // Step 4: GIF URL 검색 (항상 실행)
+        const gifCount = scenes.filter((s: { type: string }) => s.type === 'gif_insert').length;
+        if (gifCount > 0) {
+          emit({ step: 'gif', status: 'loading' });
+          for (const scene of scenes) {
+            if ((scene as { type: string; keyword?: string }).type === 'gif_insert') {
+              try {
+                const s = scene as { type: string; keyword: string; gifUrl?: string };
+                const r = await fetch(
+                  `${BASE}/api/gif?keyword=${encodeURIComponent(s.keyword)}`
+                );
+                if (r.ok) {
+                  const { gifUrl } = await r.json();
+                  s.gifUrl = gifUrl;
                 }
-              }
+              } catch { /* GIF 실패 무시 */ }
             }
-            emit({ step: 'gif', status: 'done' });
           }
+          emit({ step: 'gif', status: 'done', count: gifCount });
         }
 
         // Step 5: 메인 TTS 음성 생성 (선택)
@@ -118,11 +123,13 @@ export async function POST(req: NextRequest) {
         if (useTTS) {
           emit({ step: 'tts', status: 'loading' });
           try {
-            const { audioSrc: src } = await post('/api/tts', { text: script, jobId });
+            // TTS는 긴 대본 처리 시 수 분 소요 — 타임아웃 10분
+            const { audioSrc: src } = await post('/api/tts', { text: script, jobId }, 600_000);
             audioSrc = src;
             emit({ step: 'tts', status: 'done', audioSrc });
-          } catch {
-            emit({ step: 'tts', status: 'skipped', reason: 'TTS server unavailable' });
+          } catch (ttsErr) {
+            console.error('[pipeline/tts]', ttsErr);
+            emit({ step: 'tts', status: 'skipped', reason: String(ttsErr) });
           }
         }
 
@@ -140,12 +147,12 @@ export async function POST(req: NextRequest) {
                 const { audioSrc: narSrc } = await post('/api/tts', {
                   text: s.narration,
                   jobId: narrationJobId,
-                });
+                }, 300_000);  // narration은 짧으므로 5분
                 s.narrationAudioSrc = narSrc;
 
                 // narration 오디오 길이 측정 (Whisper duration 활용)
                 try {
-                  const { duration } = await post('/api/whisper', { audioPath: narSrc });
+                  const { duration } = await post('/api/whisper', { audioPath: narSrc }, 120_000);
                   scenes[i].durationInFrames = Math.max(60, Math.round(duration * 30));
                 } catch {
                   // Whisper 실패 시 텍스트 기반 예상 시간
@@ -166,7 +173,7 @@ export async function POST(req: NextRequest) {
         if (audioSrc) {
           emit({ step: 'whisper', status: 'loading' });
           try {
-            const { words, duration } = await post('/api/whisper', { audioPath: audioSrc });
+            const { words, duration } = await post('/api/whisper', { audioPath: audioSrc }, 120_000);
             whisperWords = words;
             emit({ step: 'whisper', status: 'done', wordCount: words.length, duration });
 
@@ -192,8 +199,8 @@ export async function POST(req: NextRequest) {
           jobId,
           scenes,
           audioSrc,
-          whisperWords,  // 자막용
-        });
+          whisperWords,
+        }, 600_000);  // 렌더링 최대 10분
         emit({ step: 'render', status: 'done', outputPath, jobId });
       } catch (err) {
         emit({ step: 'error', status: 'failed', message: String(err) });

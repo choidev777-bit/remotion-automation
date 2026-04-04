@@ -4,6 +4,8 @@ import path from 'path';
 import { execa } from 'execa';
 import type { Scene } from '../../../remotion/src/types';
 
+export const maxDuration = 600; // 10분
+
 const REMOTION_DIR = path.join(process.cwd(), 'remotion');
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
 

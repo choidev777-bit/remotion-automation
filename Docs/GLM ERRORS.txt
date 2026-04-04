@@ -1,0 +1,107 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.z.ai/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Errors
+
+When calling the API, the response code consists of two parts: the outer layer is the HTTP status code, and the inner layer is the business error code defined by Z.AI in the response body, which provides a more detailed error description.
+
+## HTTP Status Code
+
+| Code | Reason                                                                                          | Solution                                                                                            |
+| :--- | :---------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| 200  | Business processing successful                                                                  | -                                                                                                   |
+| 400  | Parameter error                                                                                 | Check if the interface parameters are correct                                                       |
+| 400  | File content anomaly                                                                            | Check if the jsonl file content meets the requirements                                              |
+| 401  | Authentication failure or Token timeout                                                         | Confirm if the API KEY and authentication token are correctly generated                             |
+| 404  | Fine-tuning feature not available                                                               | Contact customer service to activate this feature                                                   |
+| 404  | Fine-tuning task does not exist                                                                 | Ensure the fine-tuning task ID is correct                                                           |
+| 429  | Interface request concurrency exceeded                                                          | Adjust the request frequency or contact business to increase concurrency                            |
+| 429  | File upload frequency too fast                                                                  | Wait briefly and then request again                                                                 |
+| 429  | Account balance exhausted                                                                       | Recharge the account to ensure sufficient balance                                                   |
+| 429  | Account anomaly                                                                                 | Account has violation, please contact platform customer service to unlock                           |
+| 429  | Terminal account anomaly                                                                        | Terminal user has violation, account has been locked                                                |
+| 434  | No API permission, fine-tuning API and file management API are in beta phase, we will open soon | Wait for the interface to be officially open or contact platform customer service to apply for beta |
+| 435  | File size exceeds 100MB                                                                         | Use a jsonl file smaller than 100MB or upload in batches                                            |
+| 500  | Server error occurred while processing the request                                              | Try again later or contact customer service                                                         |
+
+## Business Error Codes
+
+| Error Category         | Code | Error Message                                                                                                                                                                                                                  |
+| :--------------------- | :--- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Basic Error            | 500  | Internal Error                                                                                                                                                                                                                 |
+| Authentication Error   | 1000 | Authentication Failed                                                                                                                                                                                                          |
+|                        | 1001 | Authentication parameter not received in Header, unable to authenticate                                                                                                                                                        |
+|                        | 1002 | Invalid Authentication Token, please confirm the correct transmission of the Authentication Token                                                                                                                              |
+|                        | 1003 | Authentication Token expired, please regenerate/obtain                                                                                                                                                                         |
+|                        | 1004 | Authentication failed with the provided Authentication Token                                                                                                                                                                   |
+|                        | 1100 | Account Read/Write                                                                                                                                                                                                             |
+| Account Error          | 1110 | Your account is currently inactive. Please check your account information                                                                                                                                                      |
+|                        | 1111 | Your account does not exist                                                                                                                                                                                                    |
+|                        | 1112 | Your account has been locked, please contact customer service to unlock                                                                                                                                                        |
+|                        | 1113 | Your account is in arrears, please recharge and try again                                                                                                                                                                      |
+|                        | 1120 | Unable to successfully access your account, please try again later                                                                                                                                                             |
+|                        | 1121 | Account has irregular activities and has been locked                                                                                                                                                                           |
+| API Call Error         | 1200 | API Call Error                                                                                                                                                                                                                 |
+|                        | 1210 | Incorrect API call parameters, please check the documentation                                                                                                                                                                  |
+|                        | 1211 | Model does not exist, please check the model code                                                                                                                                                                              |
+|                        | 1212 | Current model does not support `${method}` call method                                                                                                                                                                         |
+|                        | 1213 | `${field}` parameter not received properly                                                                                                                                                                                     |
+|                        | 1214 | Invalid `${field}` parameter. Please check the documentation                                                                                                                                                                   |
+|                        | 1215 | `${field1}` and `${field2}` cannot be set simultaneously, please check the documentation                                                                                                                                       |
+|                        | 1220 | You do not have permission to access `${API_name}`                                                                                                                                                                             |
+|                        | 1221 | API `${API_name}` has been taken offline                                                                                                                                                                                       |
+|                        | 1222 | API `${API_name}` does not exist                                                                                                                                                                                               |
+|                        | 1230 | API call process error                                                                                                                                                                                                         |
+|                        | 1231 | You already have a request: `${request_id}`                                                                                                                                                                                    |
+|                        | 1234 | Network error, error id: `${error_id}`, please contact customer service                                                                                                                                                        |
+|                        | 1261 | Prompt exceeds max length                                                                                                                                                                                                      |
+| API Policy Block Error | 1300 | API call blocked by policy                                                                                                                                                                                                     |
+|                        | 1301 | System detected potentially unsafe or sensitive content in input or generation. Please avoid using prompts that may generate sensitive content. Thank you for your cooperation.                                                |
+|                        | 1302 | High concurrency usage of this API, please reduce concurrency or contact customer service to increase limits                                                                                                                   |
+|                        | 1303 | High frequency usage of this API, please reduce frequency or contact customer service to increase limits                                                                                                                       |
+|                        | 1304 | Daily call limit for this API reached. For more requests, please contact customer service to purchase                                                                                                                          |
+|                        | 1305 | The API has triggered a rate limit.                                                                                                                                                                                            |
+|                        | 1308 | Usage limit reached for {number} {unit}. Your limit will reset at `${next_flush_time}`                                                                                                                                         |
+|                        | 1309 | Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website. [https://z.ai/subscribe](https://z.ai/subscribe)                     |
+|                        | 1310 | Weekly/Monthly Limit Exhausted. Your limit will reset at `${next_flush_time}`                                                                                                                                                  |
+|                        | 1311 | Your current subscription plan does not yet include access to `${model_name}`                                                                                                                                                  |
+|                        | 1312 | This model is currently experiencing high traffic. Please try again later, or switch to another model such as `${model_name}`                                                                                                  |
+|                        | 1313 | Your usage violates the Fair Use Policy. Your request rate has been restricted. See Subscription Service Agreement for details. To restore access, go to Personal Center → My Subscription and request to lift the restriction |
+
+## Error Shapes
+
+Errors are always returned as JSON, with a top-level error object that includes a `code` and `message` value.
+
+```json  theme={null}
+{
+  "error": {
+    "code": "1214",
+    "message": "Input cannot be empty"
+  }
+}
+```
+
+## Error Example
+
+The following is the response message of a curl request, where 401 is the HTTP status code and 1002 is the business error code.
+
+```
+* We are completely uploaded and fine
+< HTTP/2 401
+< date: Wed, 20 Mar 2024 03:06:05 GMT
+< content-type: application/json
+< set-cookie: acw_tc=76b20****a0e42;path=/;HttpOnly;Max-Age=1800
+< server: nginx/1.21.6
+< vary: Origin
+< vary: Access-Control-Request-Method
+< vary: Access-Control-Request-Headers
+<
+* Connection #0 to host open.z.ai left intact
+{"error":{"code":"1002","message":"Authorization Token is invalid, please ensure that the Authorization Token is correctly provided."}}
+```
+
+> **Note**: When using streaming (SSE) calls, if the API terminates abnormally during inference, the above error codes will not be returned. Instead, the reason for the exception will be provided in the `finish_reason` parameter of the response body. For details, please refer to the description of the `finish_reason` parameter.
+
+
+Built with [Mintlify](https://mintlify.com).
