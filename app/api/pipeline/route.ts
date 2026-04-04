@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
           emit({ step: 'script', status: 'done' });
         } else {
           emit({ step: 'script', status: 'loading' });
-          const res = await post('/api/script', { topic }, 120_000);
+          const res = await post('/api/script', { topic }, 300_000);
           script = res.script;
           emit({ step: 'script', status: 'done' });
         }
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
           emit({ step: 'scenes', status: 'done', count: scenes.length });
         } else {
           emit({ step: 'scenes', status: 'loading' });
-          const { scenes: generatedScenes } = await post('/api/scenes', { script }, 120_000);
+          const { scenes: generatedScenes } = await post('/api/scenes', { script }, 300_000);
           scenes = generatedScenes;
           emit({ step: 'scenes', status: 'done', count: scenes.length, scenes, jobId });
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
               idx,
               prompt: scene.prompt ?? '',
             })),
-          }, 180_000);  // ai_free 여러 개 시 시간 소요
+          }, 300_000);
           for (const { scene, idx } of aiFreeScenes) {
             if (codes[idx]) {
               (scene as { generatedCode?: string }).generatedCode = codes[idx];
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
 
                 // narration 오디오 길이 측정 (Whisper duration 활용)
                 try {
-                  const { duration } = await post('/api/whisper', { audioPath: narSrc }, 120_000);
+                  const { duration } = await post('/api/whisper', { audioPath: narSrc }, 300_000);
                   scenes[i].durationInFrames = Math.max(60, Math.round(duration * 30));
                 } catch {
                   // Whisper 실패 시 텍스트 기반 예상 시간
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
         if (audioSrc) {
           emit({ step: 'whisper', status: 'loading' });
           try {
-            const { words, duration } = await post('/api/whisper', { audioPath: audioSrc }, 120_000);
+            const { words, duration } = await post('/api/whisper', { audioPath: audioSrc }, 300_000);
             whisperWords = words;
             emit({ step: 'whisper', status: 'done', wordCount: words.length, duration });
 
