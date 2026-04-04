@@ -16,8 +16,8 @@ export type FlowchartScene = {
   type: 'flowchart';
   durationInFrames: number;
   heading: string;
-  nodes: { id: string; label: string }[];
-  edges: { from: string; to: string }[];
+  nodes: ({ id: string; label: string } | string)[];   // GLM이 string[]로 생성하는 경우도 허용
+  edges?: { from: string; to: string }[];              // optional로 변경
 };
 
 export type HighlightTextScene = {
