@@ -88,6 +88,10 @@ export const MediaInsertPanel: React.FC<MediaInsertPanelProps> = ({
       image_insert: '이미지',
       user_media: '📷 내 미디어',
       ai_free: 'AI 커스텀',
+      split_screen: '좌우 비교',
+      code_block: '코드 블록',
+      stat_number: '숫자 통계',
+      comparison_table: '비교표',
     };
     return `씬 ${idx + 1}: ${typeLabels[scene.type] ?? scene.type}`;
   };

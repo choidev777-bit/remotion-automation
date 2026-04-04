@@ -40,6 +40,14 @@ function buildGeneratedVideoCode(
         return `      <Series.Sequence durationInFrames={${d}}><ImageInsert {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
       if (s.type === 'user_media')
         return `      <Series.Sequence durationInFrames={${d}}><UserMedia {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
+      if (s.type === 'split_screen')
+        return `      <Series.Sequence durationInFrames={${d}}><SplitScreen {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
+      if (s.type === 'code_block')
+        return `      <Series.Sequence durationInFrames={${d}}><CodeBlock {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
+      if (s.type === 'stat_number')
+        return `      <Series.Sequence durationInFrames={${d}}><StatNumber {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
+      if (s.type === 'comparison_table')
+        return `      <Series.Sequence durationInFrames={${d}}><ComparisonTable {...(${JSON.stringify(s)} as any)} /></Series.Sequence>`;
       if (s.type === 'ai_free')
         return `      <Series.Sequence durationInFrames={${d}}><AI${i} /></Series.Sequence>`;
       return '';
@@ -65,6 +73,10 @@ import { HighlightText } from './templates/HighlightText';
 import { GifInsert } from './templates/GifInsert';
 import { ImageInsert } from './templates/ImageInsert';
 import { UserMedia } from './templates/UserMedia';
+import { SplitScreen } from './templates/SplitScreen';
+import { CodeBlock } from './templates/CodeBlock';
+import { StatNumber } from './templates/StatNumber';
+import { ComparisonTable } from './templates/ComparisonTable';
 ${subtitleImport}
 ${aiImports}
 

@@ -52,9 +52,39 @@ export type AiFreeScene = {
 export type UserMediaScene = {
   type: 'user_media';
   durationInFrames: number;
-  mediaSrc: string;        // "user-media/job-xxx-1234.mp4" (remotion/public/ 기준)
+  mediaSrc: string;
   mediaType: 'image' | 'video';
   caption?: string;
+};
+
+export type SplitScreenScene = {
+  type: 'split_screen';
+  durationInFrames: number;
+  left: { heading: string; points: string[] };
+  right: { heading: string; points: string[] };
+};
+
+export type CodeBlockScene = {
+  type: 'code_block';
+  durationInFrames: number;
+  language: string;
+  code: string;
+  caption?: string;
+};
+
+export type StatNumberScene = {
+  type: 'stat_number';
+  durationInFrames: number;
+  stat: string;
+  unit?: string;
+  label: string;
+};
+
+export type ComparisonTableScene = {
+  type: 'comparison_table';
+  durationInFrames: number;
+  headers: string[];
+  rows: string[][];
 };
 
 export type Scene =
@@ -65,7 +95,11 @@ export type Scene =
   | GifInsertScene
   | ImageInsertScene
   | AiFreeScene
-  | UserMediaScene;
+  | UserMediaScene
+  | SplitScreenScene
+  | CodeBlockScene
+  | StatNumberScene
+  | ComparisonTableScene;
 
 export type VideoConfig = {
   scenes: Scene[];
