@@ -708,6 +708,158 @@ textarea.input-field {
   color: var(--text-muted);
 }
 
+/* ─── Scene Card Expand ─── */
+.timeline-scene--expanded {
+  border-color: var(--primary);
+  background: rgba(0, 200, 150, 0.04);
+  max-width: 280px;
+}
+
+.timeline-scene-preview {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.timeline-scene-preview pre {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  margin: 0;
+  font-family: inherit;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* ─── Insert Form (inline) ─── */
+.insert-form {
+  flex-shrink: 0;
+  width: 280px;
+  background: var(--bg-card);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 4px;
+}
+
+.insert-form-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.insert-form-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.insert-form-input {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.insert-form-input::file-selector-button {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: border-color 0.15s;
+}
+
+.insert-form-input::file-selector-button:hover {
+  border-color: var(--primary);
+}
+
+.insert-form-filename {
+  font-size: 11px;
+  color: var(--primary);
+}
+
+.insert-form-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  display: block;
+}
+
+.insert-form-narration {
+  display: flex;
+  flex-direction: column;
+}
+
+.insert-form-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 8px 10px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.insert-form-textarea:focus {
+  border-color: var(--primary);
+}
+
+.insert-form-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.insert-form-estimate {
+  font-size: 12px;
+  color: var(--text);
+  padding: 8px 10px;
+  background: var(--primary-glow);
+  border-radius: 6px;
+}
+
+.insert-form-estimate strong {
+  color: var(--primary);
+}
+
+.insert-form-estimate-note {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.insert-form-duration {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.insert-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.insert-form-actions .btn {
+  padding: 5px 14px;
+  font-size: 12px;
+}
+
 /* ─── Scene Editor ─── */
 .scene-editor {
   background: var(--bg-card);

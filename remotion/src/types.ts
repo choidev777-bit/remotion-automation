@@ -55,6 +55,7 @@ export type UserMediaScene = {
   mediaSrc: string;
   mediaType: 'image' | 'video';
   caption?: string;
+  narration?: string;  // 별도 TTS용 텍스트 (없으면 무음)
 };
 
 export type SplitScreenScene = {
