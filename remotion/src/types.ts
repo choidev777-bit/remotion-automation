@@ -55,7 +55,8 @@ export type UserMediaScene = {
   mediaSrc: string;
   mediaType: 'image' | 'video';
   caption?: string;
-  narration?: string;  // 별도 TTS용 텍스트 (없으면 무음)
+  narration?: string;         // 별도 TTS용 텍스트 (없으면 무음)
+  narrationAudioSrc?: string; // pipeline에서 TTS 생성 후 설정
 };
 
 export type SplitScreenScene = {

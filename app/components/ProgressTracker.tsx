@@ -11,12 +11,15 @@ type Props = {
 };
 
 const STEP_LABELS: Record<string, { label: string; emoji: string }> = {
-  script:   { label: '대본 생성',          emoji: '📝' },
-  scenes:   { label: '씬 분석',            emoji: '🎬' },
-  'ai-code':{ label: 'AI 씬 코드 생성',    emoji: '🤖' },
-  gif:      { label: 'GIF 검색',           emoji: '🖼️' },
-  tts:      { label: 'TTS 음성 생성',      emoji: '🔊' },
-  render:   { label: '영상 렌더링',        emoji: '⚙️' },
+  script:          { label: '대본 생성',              emoji: '📝' },
+  scenes:          { label: '씬 분석',                emoji: '🎬' },
+  'ai-code':       { label: 'AI 씬 코드 생성',        emoji: '🤖' },
+  gif:             { label: 'GIF 검색',               emoji: '🖼️' },
+  tts:             { label: 'TTS 음성 생성',           emoji: '🔊' },
+  'tts-narration': { label: '미디어 나레이션 TTS',      emoji: '🎙️' },
+  whisper:         { label: '음성 타임스탬프 분석',      emoji: '📊' },
+  sync:            { label: '씬-오디오 싱크',           emoji: '🔗' },
+  render:          { label: '영상 렌더링',              emoji: '⚙️' },
 };
 
 const STATUS_ICON: Record<string, string> = {

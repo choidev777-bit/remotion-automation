@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Step 5: TTS 음성 생성 (선택)
+        // Step 5: 메인 TTS 음성 생성 (선택)
         let audioSrc = '';
         let whisperWords: { word: string; start: number; end: number }[] = [];
         if (useTTS) {
@@ -126,7 +126,43 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Step 5.5: Whisper STT (word-level 타임스탬프 추출)
+        // Step 5.1: user_media narration 별도 TTS 생성
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userMediaIndices: number[] = [];
+        for (let i = 0; i < scenes.length; i++) {
+          const s = scenes[i] as { type: string; narration?: string; narrationAudioSrc?: string };
+          if (s.type === 'user_media') {
+            userMediaIndices.push(i);
+            if (s.narration?.trim()) {
+              emit({ step: 'tts-narration', status: 'loading', sceneIndex: i });
+              try {
+                const narrationJobId = `${jobId}-narration-${i}`;
+                const { audioSrc: narSrc } = await post('/api/tts', {
+                  text: s.narration,
+                  jobId: narrationJobId,
+                });
+                s.narrationAudioSrc = narSrc;
+
+                // narration 오디오 길이 측정 (Whisper duration 활용)
+                try {
+                  const { duration } = await post('/api/whisper', { audioPath: narSrc });
+                  scenes[i].durationInFrames = Math.max(60, Math.round(duration * 30));
+                } catch {
+                  // Whisper 실패 시 텍스트 기반 예상 시간
+                  scenes[i].durationInFrames = Math.max(60, Math.round((s.narration.length / 5.5) * 30));
+                }
+
+                emit({ step: 'tts-narration', status: 'done', sceneIndex: i, narrationAudioSrc: narSrc });
+              } catch {
+                emit({ step: 'tts-narration', status: 'skipped', sceneIndex: i, reason: 'TTS failed' });
+                // TTS 실패 시 무음 유지 (기존 duration 그대로)
+              }
+            }
+            // narration 없는 user_media는 기존 durationInFrames 유지 (무음)
+          }
+        }
+
+        // Step 5.5: 메인 Whisper STT (word-level 타임스탬프 추출)
         if (audioSrc) {
           emit({ step: 'whisper', status: 'loading' });
           try {
@@ -134,16 +170,16 @@ export async function POST(req: NextRequest) {
             whisperWords = words;
             emit({ step: 'whisper', status: 'done', wordCount: words.length, duration });
 
-            // Step 5.6: scene-grouper로 씬 타이밍 재할당
+            // Step 5.6: scene-grouper — user_media 씬은 건너뛰고 나머지에만 오디오 배분
             if (words.length > 0 && scenes.length > 0) {
               const { assignTimings } = await import('../../../lib/scene-grouper');
-              const timings = assignTimings(words, scenes.length);
+              const timings = assignTimings(words, scenes.length, userMediaIndices);
               for (const t of timings) {
                 if (scenes[t.sceneIndex]) {
                   scenes[t.sceneIndex].durationInFrames = t.durationInFrames;
                 }
               }
-              emit({ step: 'sync', status: 'done', message: `${scenes.length}개 씬 오디오 싱크 완료` });
+              emit({ step: 'sync', status: 'done', message: `${scenes.length - userMediaIndices.length}개 씬 오디오 싱크 완료 (user_media ${userMediaIndices.length}개 제외)` });
             }
           } catch (err) {
             emit({ step: 'whisper', status: 'skipped', reason: String(err) });
