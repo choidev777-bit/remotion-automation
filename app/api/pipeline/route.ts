@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
 
         // Step 5: TTS 음성 생성 (선택)
         let audioSrc = '';
+        let whisperWords: { word: string; start: number; end: number }[] = [];
         if (useTTS) {
           emit({ step: 'tts', status: 'loading' });
           try {
@@ -125,9 +126,38 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Step 5.5: Whisper STT (word-level 타임스탬프 추출)
+        if (audioSrc) {
+          emit({ step: 'whisper', status: 'loading' });
+          try {
+            const { words, duration } = await post('/api/whisper', { audioPath: audioSrc });
+            whisperWords = words;
+            emit({ step: 'whisper', status: 'done', wordCount: words.length, duration });
+
+            // Step 5.6: scene-grouper로 씬 타이밍 재할당
+            if (words.length > 0 && scenes.length > 0) {
+              const { assignTimings } = await import('../../../lib/scene-grouper');
+              const timings = assignTimings(words, scenes.length);
+              for (const t of timings) {
+                if (scenes[t.sceneIndex]) {
+                  scenes[t.sceneIndex].durationInFrames = t.durationInFrames;
+                }
+              }
+              emit({ step: 'sync', status: 'done', message: `${scenes.length}개 씬 오디오 싱크 완료` });
+            }
+          } catch (err) {
+            emit({ step: 'whisper', status: 'skipped', reason: String(err) });
+          }
+        }
+
         // Step 6: Remotion 렌더
         emit({ step: 'render', status: 'loading' });
-        const { outputPath } = await post('/api/render', { jobId, scenes, audioSrc });
+        const { outputPath } = await post('/api/render', {
+          jobId,
+          scenes,
+          audioSrc,
+          whisperWords,  // 자막용
+        });
         emit({ step: 'render', status: 'done', outputPath, jobId });
       } catch (err) {
         emit({ step: 'error', status: 'failed', message: String(err) });

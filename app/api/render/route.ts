@@ -7,7 +7,12 @@ import type { Scene } from '../../../remotion/src/types';
 const REMOTION_DIR = path.join(process.cwd(), 'remotion');
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
 
-function buildGeneratedVideoCode(scenes: Scene[], audioSrc: string, jobId: string): string {
+function buildGeneratedVideoCode(
+  scenes: Scene[],
+  audioSrc: string,
+  jobId: string,
+  hasSubtitles: boolean,
+): string {
   const aiImports = scenes
     .map((s, i) =>
       s.type === 'ai_free'
@@ -42,8 +47,17 @@ function buildGeneratedVideoCode(scenes: Scene[], audioSrc: string, jobId: strin
     .filter(Boolean)
     .join('\n');
 
+  const subtitleImport = hasSubtitles
+    ? `import { Subtitle } from './templates/Subtitle';
+import subtitleWords from './generated/words-${jobId}.json';`
+    : '';
+
+  const subtitleLayer = hasSubtitles
+    ? `    <Subtitle words={subtitleWords} />`
+    : '';
+
   return `import React from 'react';
-import { Series, Audio } from 'remotion';
+import { Series, Audio, staticFile, AbsoluteFill } from 'remotion';
 import { TitleSlide } from './templates/TitleSlide';
 import { CardList } from './templates/CardList';
 import { Flowchart } from './templates/Flowchart';
@@ -51,15 +65,17 @@ import { HighlightText } from './templates/HighlightText';
 import { GifInsert } from './templates/GifInsert';
 import { ImageInsert } from './templates/ImageInsert';
 import { UserMedia } from './templates/UserMedia';
+${subtitleImport}
 ${aiImports}
 
 export const GeneratedVideo: React.FC = () => (
-  <>
+  <AbsoluteFill>
     ${audioSrc ? `<Audio src={staticFile("${audioSrc}")} />` : ''}
     <Series>
 ${sequences}
     </Series>
-  </>
+${subtitleLayer}
+  </AbsoluteFill>
 );
 `;
 }
@@ -98,10 +114,11 @@ export const RemotionRoot: React.FC = () => (
 
 export async function POST(req: NextRequest) {
   try {
-    const { jobId, scenes, audioSrc = '' } = (await req.json()) as {
+    const { jobId, scenes, audioSrc = '', whisperWords = [] } = (await req.json()) as {
       jobId: string;
       scenes: Scene[];
       audioSrc: string;
+      whisperWords: { word: string; start: number; end: number }[];
     };
 
     if (!jobId || !scenes?.length) {
@@ -124,8 +141,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. GeneratedVideo.tsx 동적 생성
-    const videoCode = buildGeneratedVideoCode(scenes, audioSrc, jobId);
+    // 2. whisperWords를 JSON 파일로 저장 (자막용)
+    const hasSubtitles = whisperWords.length > 0;
+    if (hasSubtitles) {
+      await writeFile(
+        path.join(genDir, `words-${jobId}.json`),
+        JSON.stringify(whisperWords),
+        'utf-8',
+      );
+    }
+
+    // 3. GeneratedVideo.tsx 동적 생성
+    const videoCode = buildGeneratedVideoCode(scenes, audioSrc, jobId, hasSubtitles);
     await writeFile(path.join(REMOTION_DIR, 'src', 'GeneratedVideo.tsx'), videoCode, 'utf-8');
 
     // 3. Root.tsx 업데이트
