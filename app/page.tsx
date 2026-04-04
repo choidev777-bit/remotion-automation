@@ -6,6 +6,7 @@ import { ProgressTracker } from './components/ProgressTracker';
 import { ResultPanel } from './components/ResultPanel';
 import { ScriptReview } from './components/ScriptReview';
 import { MediaInsertPanel } from './components/MediaInsertPanel';
+import { SceneEditor } from './components/SceneEditor';
 import type { Scene } from '../remotion/src/types';
 
 type PipelineStep = {
@@ -14,7 +15,7 @@ type PipelineStep = {
   [key: string]: unknown;
 };
 
-type Phase = 'input' | 'script-review' | 'building' | 'media-insert' | 'rendering' | 'done';
+type Phase = 'input' | 'script-review' | 'building' | 'media-insert' | 'rendering' | 'done' | 'editing';
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>('input');
@@ -27,6 +28,9 @@ export default function Home() {
   // 미디어 삽입용
   const [pendingScenes, setPendingScenes] = useState<Scene[]>([]);
   const [pendingJobId, setPendingJobId] = useState<string>('');
+  // 재편집용 — 렌더 완료 후 씬 데이터 보존
+  const [finalScenes, setFinalScenes] = useState<Scene[]>([]);
+  const [finalJobId, setFinalJobId] = useState<string>('');
 
   // Phase 1: 대본만 생성 → 리뷰 대기
   const handleGenerateScript = useCallback(async (inputTopic: string, _useTTS: boolean) => {
@@ -115,7 +119,7 @@ export default function Home() {
   }, [topic]);
 
   // Phase 3: 미디어 삽입 완료 → 렌더링
-  const handleConfirmMediaAndRender = useCallback(async (finalScenes: Scene[]) => {
+  const handleConfirmMediaAndRender = useCallback(async (confirmedScenes: Scene[]) => {
     setPhase('rendering');
     setSteps([]);
     setError(null);
@@ -127,7 +131,7 @@ export default function Home() {
         body: JSON.stringify({
           topic,
           jobId: pendingJobId,
-          scenes: finalScenes,
+          scenes: confirmedScenes,
           useTTS: true,
           skipToRender: true,
         }),
@@ -151,10 +155,14 @@ export default function Home() {
             if (data.step === 'error') {
               setError(data.message as string);
             } else if (data.step === 'render' && data.status === 'done') {
+              const doneJobId = data.jobId as string;
               setResult({
                 outputPath: data.outputPath as string,
-                jobId: data.jobId as string,
+                jobId: doneJobId,
               });
+              // 재편집을 위해 씬 + jobId 보존
+              setFinalScenes(confirmedScenes);
+              setFinalJobId(doneJobId);
               setPhase('done');
             }
 
@@ -176,6 +184,30 @@ export default function Home() {
       setError(String(err));
     }
   }, [topic, pendingJobId]);
+
+  // Phase 4: 재편집 → re-render
+  const handleRerender = useCallback(async (modifiedScenes: Scene[], originalJobId: string) => {
+    setPhase('rendering');
+    setSteps([]);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/re-render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalJobId, scenes: modifiedScenes }),
+      });
+      if (!res.ok) throw new Error(`재렌더 실패 (${res.status})`);
+      const { outputPath, jobId: newJobId } = await res.json();
+      setResult({ outputPath, jobId: newJobId });
+      setFinalScenes(modifiedScenes);
+      setFinalJobId(newJobId);
+      setPhase('done');
+    } catch (err) {
+      setError(String(err));
+      setPhase('done'); // 에러 시 done으로 복귀
+    }
+  }, []);
 
   // 대본 재생성 — 입력 단계로 돌아가기
   const handleRejectScript = useCallback(() => {
@@ -244,7 +276,32 @@ export default function Home() {
       {steps.length > 0 && <ProgressTracker steps={steps} />}
 
       {/* 완료 결과 */}
-      {result && <ResultPanel outputPath={result.outputPath} jobId={result.jobId} />}
+      {result && phase === 'done' && (
+        <>
+          <ResultPanel outputPath={result.outputPath} jobId={result.jobId} />
+          {finalScenes.length > 0 && (
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <button
+                id="open-scene-editor"
+                className="btn btn-secondary"
+                onClick={() => setPhase('editing')}
+              >
+                ✏️ 씬 수정하기
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 씬 수정 모드 */}
+      {phase === 'editing' && finalScenes.length > 0 && (
+        <SceneEditor
+          scenes={finalScenes}
+          jobId={finalJobId}
+          onRerender={handleRerender}
+          onCancel={() => setPhase('done')}
+        />
+      )}
     </main>
   );
 }
