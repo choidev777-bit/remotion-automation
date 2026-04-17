@@ -23,7 +23,7 @@ function sceneToEditText(scene: Scene): string {
         ...scene.cards.map((c) => `${c.name}${c.desc ? ': ' + c.desc : ''}`),
       ].join('\n');
     case 'flowchart':
-      return [scene.heading, ...scene.nodes.map((n) => n.label)].join('\n');
+      return [scene.heading, ...scene.nodes.map((n) => typeof n === 'string' ? n : n.label)].join('\n');
     case 'split_screen':
       return [
         `[왼쪽] ${scene.left.heading}`,

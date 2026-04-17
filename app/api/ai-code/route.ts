@@ -1,9 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readFile } from 'fs/promises';
+import path from 'path';
+
+export const maxDuration = 1800; // 30분 — ai_free 15개+ Thinking Mode 대응
 import { glmCode } from '@/lib/glm';
+import { AI_FREE_PROMPT } from '@/lib/prompts';
 
 interface SceneInput {
   idx: number;
-  prompt: string;
+  prompt: string;   // scenePlan JSON 또는 구형 비주얼 텍스트
+  keyword?: string; // 핵심 주제 키워드
+}
+
+// 파이프라인에 필요한 Remotion 스킬 파일 목록
+const SKILL_FILES = [
+  'animations.md',     // 필수: useCurrentFrame, CSS 금지
+  'timing.md',         // 필수: interpolate, spring, easing
+  'gifs.md',           // 필수: AnimatedImage 사용법
+  'text-animations.md', // 권장: 텍스트 효과
+  'sequencing.md',     // 권장: 씬 순서/딜레이
+  'fonts.md',          // 권장: 폰트 로딩
+];
+
+const SKILLS_DIR = path.join(
+  process.cwd(),
+  '.agent', 'skills', 'remotion', 'skills', 'skills', 'remotion', 'rules',
+);
+
+/** 스킬 파일들을 읽어서 하나의 텍스트로 합침 */
+async function loadSkillRules(): Promise<string> {
+  const parts: string[] = [];
+  for (const file of SKILL_FILES) {
+    try {
+      const content = await readFile(path.join(SKILLS_DIR, file), 'utf-8');
+      // YAML frontmatter 제거 (--- ... --- 블록)
+      const cleaned = content.replace(/^---[\s\S]*?---\s*\n/, '').trim();
+      parts.push(`### ${file.replace('.md', '')}\n${cleaned}`);
+    } catch {
+      console.warn(`[ai-code] Skill file not found: ${file}`);
+    }
+  }
+  return parts.join('\n\n');
 }
 
 export async function POST(req: NextRequest) {
@@ -13,8 +50,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'scenes is required' }, { status: 400 });
     }
 
-    const combinedPrompt = buildBatchPrompt(scenes);
-    const raw = await glmCode(combinedPrompt);
+    const combinedPrompt = await buildBatchPrompt(scenes);
+    const raw = await glmCode(combinedPrompt, 0.7, 1.0);
 
     // 각 씬 코드를 딜리미터로 분리 파싱
     const codes: Record<number, string> = {};
@@ -41,31 +78,34 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function buildBatchPrompt(scenes: SceneInput[]): string {
+async function buildBatchPrompt(scenes: SceneInput[]): Promise<string> {
   const sceneList = scenes
-    .map(s => `씬 인덱스 ${s.idx}:\n${s.prompt}`)
+    .map((s) => {
+      const visualSection = s.prompt.trim().startsWith('{')
+        ? `scenePlan JSON:\n${s.prompt}`
+        : `비주얼: ${s.prompt}`;
+
+      return `씬 인덱스 ${s.idx} [주제: ${s.keyword ?? ''}]:\n${visualSection}`;
+    })
     .join('\n\n---\n\n');
 
-  return `당신은 Remotion(React 기반 영상 프레임워크) 전문 개발자입니다.
-아래 ${scenes.length}개의 씬 프롬프트를 보고, 각각의 Remotion 씬 컴포넌트를 작성하세요.
+  // Remotion 스킬 규칙 로드
+  const skillRules = await loadSkillRules();
 
-## 필수 규칙
-1. 반드시 다음 import로 시작:
-import React from 'react';
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { theme } from '../theme';
+  // AI_FREE_PROMPT에서 마지막 "## 씬 프롬프트:\n" 부분 제거 (배치 형식에서 별도 관리)
+  const designGuide = AI_FREE_PROMPT.replace(/## 씬 프롬프트:\s*$/, '').trim();
 
-2. 컴포넌트 이름은 반드시 AiFreeScene으로 고정:
-export const AiFreeScene: React.FC = () => { ... }
+  return `${designGuide}
 
-3. theme.ts 색상 토큰 반드시 사용:
-- bg: #0E0E0E, text: #FDFFFF, primary: #00C896, accent: #FFCF00
-- card: #1A1A1A, textMuted: #7A7978
+## Remotion 베스트 프랙티스 (반드시 준수)
+${skillRules}
 
-4. AbsoluteFill을 루트 컨테이너로 사용
-5. useCurrentFrame()으로 애니메이션 구현 (interpolate, spring 활용)
-6. SVG로 아이콘/도형 직접 그릴 것 (외부 이미지/이모지 사용 금지)
-7. 마크다운 코드블록(\`\`\`) 없이 코드만 출력
+## 배치 출력 규칙
+아래 ${scenes.length}개의 씬 입력을 보고, 각각 독립적인 Remotion 씬 컴포넌트를 작성하세요.
+- scenePlan JSON이 있으면 layoutFamily, revealStrategy, timingPlan, elements, constraints를 **그대로 구현**하세요.
+- scenePlan JSON이 있으면 새 레이아웃을 다시 발명하지 마세요.
+- scenePlan JSON이 없고 구형 비주얼 텍스트만 있으면 보수적으로 해석하세요.
+- 마크다운 코드블록(\`\`\`) 없이 코드만 출력
 
 ## 출력 형식 (반드시 준수, 각 씬을 아래 구분자로 감싸기):
 === SCENE_[인덱스] START ===

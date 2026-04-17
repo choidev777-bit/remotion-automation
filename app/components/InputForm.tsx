@@ -4,7 +4,9 @@ import { useState } from 'react';
 
 type Props = {
   onGenerate: (topic: string, useTTS: boolean) => void;
+  onDirectScript: (script: string, useTTS: boolean) => void;
   isRunning: boolean;
+  initialUseTTS?: boolean;
 };
 
 const TABS = ['주제로 생성', '대본 직접 입력', '유튜브 조합'] as const;
@@ -15,11 +17,11 @@ const PLACEHOLDER = [
   '유튜브 링크를 한 줄에 하나씩 입력 (추후 지원)',
 ];
 
-export function InputForm({ onGenerate, isRunning }: Props) {
+export function InputForm({ onGenerate, onDirectScript, isRunning, initialUseTTS = false }: Props) {
   const [activeTab, setActiveTab] = useState(0);
   const [topic, setTopic] = useState('');
   const [script, setScript] = useState('');
-  const [useTTS, setUseTTS] = useState(false);
+  const [useTTS, setUseTTS] = useState(initialUseTTS);
 
   const canSubmit =
     !isRunning &&
@@ -29,7 +31,7 @@ export function InputForm({ onGenerate, isRunning }: Props) {
   const handleSubmit = () => {
     if (!canSubmit) return;
     if (activeTab === 0) onGenerate(topic.trim(), useTTS);
-    // 다른 탭은 Phase 확장 시
+    if (activeTab === 1) onDirectScript(script.trim(), useTTS);
   };
 
   return (
@@ -86,7 +88,7 @@ export function InputForm({ onGenerate, isRunning }: Props) {
 
       {/* TTS 토글 */}
       <div className="toggle-row">
-        <span className="toggle-label">🔊 TTS 음성 자동 생성 (Qwen3 — 로컬 필요)</span>
+        <span className="toggle-label">🔊 TTS 음성 자동 생성</span>
         <button
           className={`toggle${useTTS ? ' on' : ''}`}
           onClick={() => setUseTTS(!useTTS)}

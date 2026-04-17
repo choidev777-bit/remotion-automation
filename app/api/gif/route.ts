@@ -12,32 +12,48 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'KLIPY_API_KEY not set' }, { status: 500 });
     }
 
+    // Klipy 공식 문서 기준 파라미터
+    // https://docs.klipy.com/gifs-api/gifs-search-api
     const params = new URLSearchParams({
       q: keyword,
-      limit: '5',
+      per_page: '8',           // 공식: per_page (8~50, 기본 24)
+      customer_id: 'pipeline', // 공식: 필수 파라미터
     });
 
     const url = `https://api.klipy.com/api/v1/${apiKey}/gifs/search?${params}`;
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000); // 10초 타임아웃
+
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
     const data = await res.json();
 
     // 디버깅: 실제 응답 구조 확인
     console.log('[/api/gif] Klipy response keys:', Object.keys(data));
     if (data.data?.length) {
       console.log('[/api/gif] First item keys:', Object.keys(data.data[0]));
+      if (data.data[0].file) {
+        console.log('[/api/gif] First item file keys:', Object.keys(data.data[0].file));
+      }
     }
 
-    // Klipy 응답에서 GIF URL 추출 (여러 경로 시도)
+    // Klipy 공식 응답 구조에서 GIF URL 추출
     let gifUrl: string | undefined;
 
     if (data.data?.length) {
       const item = data.data[0];
       gifUrl =
-        item.url ||                                    // 직접 url 필드
-        item.media?.gif?.url ||                        // media.gif.url
-        item.media_formats?.gif?.url ||                // Tenor 호환 형식
-        item.images?.original?.url ||                  // GIPHY 호환 형식
-        item.preview?.url;                             // 프리뷰
+        // 공식 문서 경로: file.hd.gif 또는 file.sd.gif
+        item.file?.hd?.gif ||
+        item.file?.sd?.gif ||
+        item.file?.hd?.webp ||
+        item.file?.sd?.webp ||
+        // 대체 경로들
+        item.url ||
+        item.media?.gif?.url ||
+        item.media_formats?.gif?.url ||
+        item.images?.original?.url ||
+        item.preview?.url;
     }
 
     // Tenor 호환 응답 형식 (migrate-from-tenor 경로)
@@ -52,7 +68,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ gifUrl });
   } catch (err) {
-    console.error('[/api/gif]', err);
-    return NextResponse.json({ error: 'GIF search failed' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.error('[/api/gif]', msg);
+    return NextResponse.json({ error: `GIF search failed: ${msg}` }, { status: 500 });
   }
 }

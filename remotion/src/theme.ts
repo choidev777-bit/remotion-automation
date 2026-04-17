@@ -1,13 +1,13 @@
 export const theme = {
   colors: {
-    bg: '#0E0E0E',
+    bg: '#000000',
     text: '#FDFFFF',
-    primary: '#00C896',
+    primary: '#00DFA7',
     accent: '#FFCF00',
-    card: '#1A1A1A',
-    border: '#2A2A2A',
-    textMuted: '#7A7978',
-    primaryGlow: 'rgba(0, 200, 150, 0.15)',
+    card: '#111111',
+    border: '#333333',
+    textMuted: '#9A9A9A',
+    primaryGlow: 'rgba(0, 223, 167, 0.15)',
   },
   font: {
     family: 'Pretendard, -apple-system, BlinkMacSystemFont, sans-serif',

@@ -4,8 +4,8 @@
   --bg-input: #141414;
   --text: #FDFFFF;
   --text-muted: #7A7978;
-  --primary: #00C896;
-  --primary-glow: rgba(0, 200, 150, 0.15);
+  --primary: #00DFA7;
+  --primary-glow: rgba(0, 223, 167, 0.15);
   --accent: #FFCF00;
   --border: #2A2A2A;
   --danger: #FF4D4F;
@@ -589,15 +589,15 @@ textarea.input-field {
 /* ─── Scene Timeline ─── */
 .scene-timeline {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  flex-wrap: nowrap;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .scene-timeline::-webkit-scrollbar {
-  height: 4px;
+  width: 4px;
 }
 .scene-timeline::-webkit-scrollbar-thumb {
   background: var(--border);
@@ -606,15 +606,15 @@ textarea.input-field {
 
 .timeline-scene {
   flex-shrink: 0;
-  min-width: 100px;
-  max-width: 140px;
+  width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 10px 8px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
 .timeline-scene--user {
@@ -623,12 +623,9 @@ textarea.input-field {
 }
 
 .timeline-scene-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .timeline-scene-duration {
@@ -708,11 +705,9 @@ textarea.input-field {
   color: var(--text-muted);
 }
 
-/* ─── Scene Card Expand ─── */
 .timeline-scene--expanded {
   border-color: var(--primary);
   background: rgba(0, 200, 150, 0.04);
-  max-width: 280px;
 }
 
 .timeline-scene-preview {

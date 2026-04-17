@@ -19,7 +19,7 @@ function getScenePreview(scene: Scene): string {
     case 'card_list':
       return [scene.heading, ...scene.cards.map((c) => `• ${c.name}${c.desc ? ': ' + c.desc : ''}`)].join('\n');
     case 'flowchart':
-      return [scene.heading, ...scene.nodes.map((n) => `→ ${n.label}`)].join('\n');
+      return [scene.heading, ...scene.nodes.map((n) => `→ ${typeof n === 'string' ? n : n.label}`)].join('\n');
     case 'split_screen':
       return [
         `[왼] ${scene.left.heading}`,
@@ -38,7 +38,7 @@ function getScenePreview(scene: Scene): string {
     case 'user_media':
       return [scene.caption, scene.narration ? `🔊 "${scene.narration}"` : '🔇 무음'].filter(Boolean).join('\n');
     case 'ai_free':
-      return scene.prompt;
+      return (scene as unknown as { narration?: string }).narration || scene.prompt || '';
     default:
       return '';
   }
@@ -179,45 +179,45 @@ export const MediaInsertPanel: React.FC<MediaInsertPanelProps> = ({
 
             {/* 씬 카드 */}
             <div
-              className={`timeline-scene ${scene.type === 'user_media' ? 'timeline-scene--user' : ''} ${expandedIdx === idx ? 'timeline-scene--expanded' : ''}`}
-              onClick={() => toggleExpand(idx)}
-              style={{ cursor: 'pointer' }}
+              className={`timeline-scene ${scene.type === 'user_media' ? 'timeline-scene--user' : ''}`}
             >
-              <div className="timeline-scene-label">
-                씬 {idx + 1}: {TYPE_LABELS[scene.type] ?? scene.type}
-              </div>
-              <div className="timeline-scene-duration">
-                {(scene.durationInFrames / 30).toFixed(1)}s
-              </div>
-              <div className="timeline-scene-actions" onClick={(e) => e.stopPropagation()}>
-                <button
-                  className="timeline-btn timeline-btn--replace"
-                  onClick={() => {
-                    setInsertForm({ mode: 'replace', targetIndex: idx });
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={uploading}
-                  title="이 씬을 내 미디어로 교체"
-                >
-                  🔄
-                </button>
-                {scene.type === 'user_media' && (
-                  <button
-                    className="timeline-btn timeline-btn--remove"
-                    onClick={() => removeScene(idx)}
-                    title="이 씬 삭제"
-                  >
-                    ✕
-                  </button>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="timeline-scene-label">
+                  씬 {idx + 1}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="timeline-scene-duration">
+                    {(scene.durationInFrames / 30).toFixed(1)}s
+                  </div>
+                  <div className="timeline-scene-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="timeline-btn timeline-btn--replace"
+                      onClick={() => {
+                        setInsertForm({ mode: 'replace', targetIndex: idx });
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={uploading}
+                      title="이 씬을 내 미디어로 교체"
+                    >
+                      🔄
+                    </button>
+                    {scene.type === 'user_media' && (
+                      <button
+                        className="timeline-btn timeline-btn--remove"
+                        onClick={() => removeScene(idx)}
+                        title="이 씬 삭제"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* 확장 미리보기 */}
-              {expandedIdx === idx && (
-                <div className="timeline-scene-preview" onClick={(e) => e.stopPropagation()}>
-                  <pre>{getScenePreview(scene)}</pre>
-                </div>
-              )}
+              {/* 대본 항상 표시 */}
+              <div className="timeline-scene-preview">
+                <pre>{getScenePreview(scene)}</pre>
+              </div>
             </div>
 
             {/* 삽입 폼 (이 씬 뒤에 표시) */}
@@ -384,13 +384,19 @@ export const MediaInsertPanel: React.FC<MediaInsertPanelProps> = ({
             if (!res.ok) throw new Error((await res.json()).error);
             const { mediaSrc, mediaType } = await res.json();
 
+            const original = scenes[insertForm.targetIndex];
             const next = [...scenes];
             next[insertForm.targetIndex] = {
               type: 'user_media',
-              durationInFrames: scenes[insertForm.targetIndex].durationInFrames,
+              durationInFrames: original.durationInFrames,
               mediaSrc,
               mediaType,
               caption: '',
+              // 기존 씬의 대본 및 TTS 데이터 보존
+              narration: original.narration,
+              ...(original.ttsText ? { ttsText: original.ttsText } : {}),
+              ...(original.audioSrc ? { audioSrc: original.audioSrc } : {}),
+              ...(original.words ? { words: original.words } : {}),
             } as UserMediaScene;
             onChange(next);
           } catch (err) {

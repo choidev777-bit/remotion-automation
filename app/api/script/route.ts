@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const maxDuration = 600; // 10분
 import { glmChat } from '@/lib/glm';
 import { SCRIPT_PROMPT } from '@/lib/prompts';
 
@@ -9,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'topic is required' }, { status: 400 });
     }
 
-    const script = await glmChat(SCRIPT_PROMPT + topic);
+    const script = await glmChat(SCRIPT_PROMPT + topic, undefined, 1.0);
 
     return NextResponse.json({ script });
   } catch (err) {

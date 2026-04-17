@@ -13,6 +13,7 @@ type Props = {
 const STEP_LABELS: Record<string, { label: string; emoji: string }> = {
   script:          { label: '대본 생성',              emoji: '📝' },
   scenes:          { label: '씬 분석',                emoji: '🎬' },
+  'visual-prompt': { label: '비주얼 설계',             emoji: '🎨' },
   'ai-code':       { label: 'AI 씬 코드 생성',        emoji: '🤖' },
   gif:             { label: 'GIF 검색',               emoji: '🖼️' },
   tts:             { label: 'TTS 음성 생성',           emoji: '🔊' },

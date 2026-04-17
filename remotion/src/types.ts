@@ -1,90 +1,88 @@
-export type TitleScene = {
-  type: 'title';
+// 모든 씬에 공통으로 들어가는 필드
+type SceneBase = {
   durationInFrames: number;
+  narration?: string;        // 화면에 표시되는 대본 텍스트
+  ttsText?: string;           // 발음용 대본 (설정 시 TTS에 이 텍스트 사용, 미설정 시 narration 사용)
+  audioSrc?: string;         // 생성된 오디오 파일 경로
+  words?: { word: string; start: number; end: number }[];  // Whisper word-level 타임스탬프 (자막용)
+  prompt?: string;           // scenePlan JSON 또는 구형 비주얼 프롬프트 (ai_free 씬에서 주로 사용)
+  generatedCode?: string;    // AI 생성 TSX 코드 (ai_free 씬에서 주로 사용)
+};
+
+export type TitleScene = SceneBase & {
+  type: 'title';
   title: string;
   subtitle?: string;
 };
 
-export type CardListScene = {
+export type CardListScene = SceneBase & {
   type: 'card_list';
-  durationInFrames: number;
   heading: string;
   cards: { name: string; desc?: string }[];
 };
 
-export type FlowchartScene = {
+export type FlowchartScene = SceneBase & {
   type: 'flowchart';
-  durationInFrames: number;
   heading: string;
-  nodes: ({ id: string; label: string } | string)[];   // GLM이 string[]로 생성하는 경우도 허용
-  edges?: { from: string; to: string }[];              // optional로 변경
+  nodes: ({ id: string; label: string } | string)[];
+  edges?: { from: string; to: string }[];
 };
 
-export type HighlightTextScene = {
+export type HighlightTextScene = SceneBase & {
   type: 'highlight_text';
-  durationInFrames: number;
   text: string;
   emphasis?: string;
 };
 
-export type GifInsertScene = {
+export type GifInsertScene = SceneBase & {
   type: 'gif_insert';
-  durationInFrames: number;
   keyword: string;
   gifUrl: string;
   caption?: string;
 };
 
-export type ImageInsertScene = {
+export type ImageInsertScene = SceneBase & {
   type: 'image_insert';
-  durationInFrames: number;
   src: string;
   caption?: string;
 };
 
-export type AiFreeScene = {
+export type AiFreeScene = SceneBase & {
   type: 'ai_free';
-  durationInFrames: number;
   prompt: string;
   generatedCode: string;
 };
 
-export type UserMediaScene = {
+export type UserMediaScene = SceneBase & {
   type: 'user_media';
-  durationInFrames: number;
   mediaSrc: string;
   mediaType: 'image' | 'video';
   caption?: string;
-  narration?: string;         // 별도 TTS용 텍스트 (없으면 무음)
-  narrationAudioSrc?: string; // pipeline에서 TTS 생성 후 설정
+  narrationAudioSrc?: string;
 };
 
-export type SplitScreenScene = {
+export type SplitScreenScene = SceneBase & {
   type: 'split_screen';
-  durationInFrames: number;
   left: { heading: string; points: string[] };
   right: { heading: string; points: string[] };
 };
 
-export type CodeBlockScene = {
+export type CodeBlockScene = SceneBase & {
   type: 'code_block';
-  durationInFrames: number;
   language: string;
   code: string;
   caption?: string;
 };
 
-export type StatNumberScene = {
+export type StatNumberScene = SceneBase & {
   type: 'stat_number';
-  durationInFrames: number;
   stat: string;
   unit?: string;
   label: string;
 };
 
-export type ComparisonTableScene = {
+export type ComparisonTableScene = SceneBase & {
   type: 'comparison_table';
-  durationInFrames: number;
   headers: string[];
   rows: string[][];
 };
@@ -105,7 +103,6 @@ export type Scene =
 
 export type VideoConfig = {
   scenes: Scene[];
-  audioSrc: string;
   fps: number;
   width: number;
   height: number;

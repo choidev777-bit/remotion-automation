@@ -3,6 +3,8 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import Groq from 'groq-sdk';
 
+export const maxDuration = 120; // 2분 (개별 씬 WAV는 짧음)
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
@@ -24,17 +26,20 @@ export async function POST(req: NextRequest) {
       response_format: 'verbose_json',  // word-level 타임스탬프 포함
       timestamp_granularities: ['word'],
     });
+    // verbose_json 응답에는 words, language, duration이 포함되지만
+    // Groq SDK 타입 정의에 누락되어 있으므로 any 캐스팅
+    const result = transcription as any;
 
     // words 배열 정규화
-    const words = (transcription.words ?? []).map((w) => ({
+    const words = (result.words ?? []).map((w: any) => ({
       word: w.word.trim(),
       start: Math.round(w.start * 1000) / 1000,
       end: Math.round(w.end * 1000) / 1000,
     }));
 
     return NextResponse.json({
-      language: transcription.language,
-      duration: transcription.duration,
+      language: result.language,
+      duration: result.duration,
       words,
     });
   } catch (err) {
